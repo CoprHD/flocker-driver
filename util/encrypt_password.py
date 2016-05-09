@@ -1,3 +1,7 @@
+# Copyright Hybrid Logic Ltd.
+# Copyright 2015-2016 EMC Corporation
+# See LICENSE file for details..
+
 import argparse
 parser = argparse.ArgumentParser()
 mandatory_args = parser.add_argument_group('mandatory arguments')
