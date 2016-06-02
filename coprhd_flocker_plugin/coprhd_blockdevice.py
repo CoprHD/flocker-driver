@@ -399,6 +399,7 @@ class CoprHDCLIDriver(object):
             else:
                 Message.new(Debug="Volume : delete failed").write(_logger)
     
+    @retry_wrapper
     def create_project(self,name):
         self.authenticate_user()
         Message.new(Debug="coprhd create_project").write(_logger)
@@ -416,6 +417,7 @@ class CoprHDCLIDriver(object):
             else:
                 Message.new(Debug="coprhd create project failed").write(_logger)
 
+    @retry_wrapper
     def create_export_group(self,name,host,exportgrouptype="Host"):
         self.authenticate_user()
         try:
@@ -456,6 +458,7 @@ class CoprHDCLIDriver(object):
             else:
                 Message.new(Debug="coprhd create export groups failed").write(_logger)
         
+    @retry_wrapper
     def create_host(self,name,label,hosttype="Other"):
         self.authenticate_user()
         hostname = self.host_obj.search_by_name(name)
@@ -488,6 +491,7 @@ class CoprHDCLIDriver(object):
             else:
                 Message.new(Debug="coprhd create host failed").write(_logger)
         
+    @retry_wrapper
     def add_initiators(self,sync, hostlabel, protocol, portwwn,initname):
         self.authenticate_user()
         portwwn = None
@@ -511,6 +515,7 @@ class CoprHDCLIDriver(object):
             else:
                 Message.new(Debug="coprhd add initiators failed").write(_logger)
             
+    @retry_wrapper
     def create_network(self,name,nwtype):
         self.authenticate_user()
         try:
