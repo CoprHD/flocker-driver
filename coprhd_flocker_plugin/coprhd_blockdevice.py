@@ -531,7 +531,7 @@ class CoprHDCLIDriver(object):
                   tz = self.network_obj.show(name)
                   if ("endpoints" in tz):
                    endpoints = tz['endpoints']
-                   if endpoint not in endpoints:
+                   if host_port not in endpoints:
                     self.network_obj.add_endpoint(name,endpoint=host_port)
                   break
         except utils.SOSError as e:

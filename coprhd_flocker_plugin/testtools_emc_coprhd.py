@@ -27,8 +27,6 @@ def coprhd_client_for_test():
     dataset = _read_coprhd_yaml()
     coprhdhost=dataset['coprhdhost']
     port = dataset['port']
-    username = dataset['username']
-    password = dataset['password']
     tenant = dataset['tenant']
     project = dataset['project']
     varray = dataset['varray']
@@ -40,10 +38,10 @@ def coprhd_client_for_test():
     vpool_bronze = dataset['vpool_bronze']
     hostexportgroup = dataset['hostexportgroup']
     coprhdcli_security_file = dataset['coprhdcli_security_file']
-    cluster_id = dataset['cluster_id']
+    cluster_id = 12345
     
-    config = configuration(coprhdhost, port, username, password, tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id)
-    cli_obj = CoprHDCLIDriver(coprhdhost,port, username, password, tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id)
+    config = configuration(coprhdhost, port, tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id)
+    cli_obj = CoprHDCLIDriver(coprhdhost,port,tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id)
     return config,cli_obj
 
 #coprhd_client_for_test()
