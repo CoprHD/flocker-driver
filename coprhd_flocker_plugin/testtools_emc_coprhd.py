@@ -1,11 +1,20 @@
 # Copyright Hybrid Logic Ltd.
-# Copyright 2015-2016 EMC Corporation
-# See LICENSE file for details..
+# Copyright 2015 EMC Corporation
+# See LICENSE file for details.
 
-#from coprhd_blockdevice import configuration
+"""
+EMC Test helpers for ``flocker.node.agents``.
+"""
+
 import os
 import yaml
-from coprhd_flocker_plugin.coprhd_blockdevice import configuration,CoprHDCLIDriver
+import socket
+from uuid import uuid4
+
+from twisted.trial.unittest import SkipTest
+
+from coprhd_flocker_plugin.coprhd_blockdevice import configuration
+from coprhd_flocker_plugin.coprhd_blockdevice import CoprHDCLIDriver
 
 def _read_coprhd_yaml():
     '''
@@ -15,15 +24,13 @@ def _read_coprhd_yaml():
     with open(config_file_path, 'r') as stream:
         coprhd_conf = yaml.load(stream)
     return coprhd_conf['dataset']
-
     
-
-def coprhd_client_for_test():
-    '''
-    This Method parse the attributes in yml file and assigns the values
-
-    Returns the object of configuration in coprhd plugin driver
-    '''
+def tidy_coprhd_client_for_test(test_case):
+    """
+    Return a ``CoprHD Client`and register a ``test_case``
+    :param test_case object
+    """
+    
     dataset = _read_coprhd_yaml()
     coprhdhost=dataset['coprhdhost']
     port = dataset['port']
@@ -38,18 +45,7 @@ def coprhd_client_for_test():
     vpool_bronze = dataset['vpool_bronze']
     hostexportgroup = dataset['hostexportgroup']
     coprhdcli_security_file = dataset['coprhdcli_security_file']
-    cluster_id = 12345
-    
-    config = configuration(coprhdhost, port, tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id)
-    cli_obj = CoprHDCLIDriver(coprhdhost,port,tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id)
-    return config,cli_obj
-
-#coprhd_client_for_test()
-def tidy_coprhd_client_for_test(test_case):
-    '''
-    This Method calls coprhd_client_for_test for CoprHD Plugin API 
-    Returns API of CoprHD Plugin
-    '''
-    client,cli= coprhd_client_for_test()
-    return client,cli
-
+        
+    coprhdobj = configuration(coprhdhost, port, tenant,project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file)
+    return coprhdobj
+      
