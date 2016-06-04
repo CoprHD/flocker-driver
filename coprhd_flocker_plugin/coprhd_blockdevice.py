@@ -76,12 +76,11 @@ class CoprHDCLIDriver(object):
     AUTHENTICATED = False
     def __init__(self, coprhdhost, 
                  port, tenant, 
-                 project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id):
-        self.cluster_id = cluster_id
+                 project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file):
         self.coprhdhost = coprhdhost
         self.port =  port
         self.tenant = tenant
-        self.project = str(project)+'-'+str(cluster_id)
+        self.project = project
         self.varray = varray
         self.cookiedir = cookiedir
         self.vpool = vpool
@@ -189,14 +188,20 @@ class CoprHDCLIDriver(object):
               if volumeuri == evolumes['id']:
                return evolumes['lun']
            return 
-        except utils.SOSError:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+        except utils.SOSError as e:
+            if e.err_code == utils.SOSError.NOT_FOUND_ERR:
+                Message.new(Debug="Volume : doesnot exist").write(_logger)
+            elif(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd get volume lunid http error" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
-                    "coprhd-get_volume_lunid failed" + e.err_text)
+                    "coprhd get volume lunid failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd-get_volume_lunid failed").write(_logger)
-            
+    
     @retry_wrapper
     def get_volume_wwn(self, vol):
         self.authenticate_user()
@@ -220,14 +225,21 @@ class CoprHDCLIDriver(object):
               if volumeuri == evolumes['id']:
                return volumedetails['wwn']
            return 
-        except utils.SOSError:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+        except utils.SOSError as e:
+            if e.err_code == utils.SOSError.NOT_FOUND_ERR:
+                Message.new(Debug="Volume : doesnot exist").write(_logger)
+                return None
+            elif(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd get volume wwn http error" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
-                    "coprhd-get_volume_wwn failed" + e.err_text)
+                    "coprhd get volume wwn details failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd-get_volume_wwn failed").write(_logger)
-                            
+                    
     @retry_wrapper                
     def get_volume_details(self, vol):
         self.authenticate_user()
@@ -254,14 +266,20 @@ class CoprHDCLIDriver(object):
                return volume_dict
            volume_dict[volumedetails['name'][8:]]={'size':volumedetails['provisioned_capacity_gb'],'attached_to':None}
            return volume_dict
-        except utils.SOSError:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+        except utils.SOSError as e:
+            if e.err_code == utils.SOSError.NOT_FOUND_ERR:
+                Message.new(Debug="Volume : doesnot exist").write(_logger)
+            elif(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd get volume http error" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd get volume details failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd get volume details failed").write(_logger)
-           
+    
     @retry_wrapper
     def list_volume(self):
         self.authenticate_user()
@@ -292,11 +310,17 @@ class CoprHDCLIDriver(object):
               showvolume = self.volume_obj.show_by_uri(v_uri)
               if showvolume['name'].startswith('flocker'):
                   flocker_volumes[showvolume['name'][8:]] = {'size' : showvolume['allocated_capacity_gb'] , 'attached_to' : None}
-        except utils.SOSError:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+        except utils.SOSError as e:
+            if e.err_code == utils.SOSError.NOT_FOUND_ERR:
+                Message.new(Debug="no volumes for project").write(_logger)
+            elif(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd list volumes http error" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
-                    "coprhd list volume failed" + e.err_text)
+                    "coprhd list_volumes failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd list volume failed").write(_logger)
         return flocker_volumes
@@ -328,10 +352,14 @@ class CoprHDCLIDriver(object):
                 # no longer specified in volume creation
                 consistencygroup=None)
         except utils.SOSError as e:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+            if(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd create volumes http error" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
-                    "Volume " + name + ": create failed\n" + e.err_text)
+                    "coprhd create volume failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd create_volume failed").write(_logger)
 
@@ -348,10 +376,14 @@ class CoprHDCLIDriver(object):
                 None,
                 None)
         except utils.SOSError as e:
-         if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+         if(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd unexport_volume http error" + e.err_text)
+         elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
-                    "coprhd unexport volume failed" + e.err_text)
+                    "coprhd unexport_volume failed" + e.err_text)
          else:
                 Message.new(Debug="coprhd unexport volume failed").write(_logger)
 
@@ -360,17 +392,20 @@ class CoprHDCLIDriver(object):
         self.authenticate_user()
         Message.new(Info="coprhd export_volume").write(_logger)
         try:
-               self.exportgroup_obj.exportgroup_add_volumes(
+                self.exportgroup_obj.exportgroup_add_volumes(
                 True,
                 self.hostexportgroup,
                 self.tenant,
-                '1',
-                '1',
-                '1',
                 self.project,
-                [vol])
+                [vol],
+                None,
+                None)
         except utils.SOSError as e:
-         if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+         if(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd export_volume http error" + e.err_text)
+         elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd export_volume failed" + e.err_text)
@@ -392,14 +427,13 @@ class CoprHDCLIDriver(object):
         except utils.SOSError as e:
             if e.err_code == utils.SOSError.NOT_FOUND_ERR:
                 Message.new(Debug="Volume : already deleted").write(_logger)
-            elif(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+            elif e.err_code == utils.SOSError.SOS_FAILURE_ERR:
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "Volume " + name + ": Delete failed\n" + e.err_text)
             else:
                 Message.new(Debug="Volume : delete failed").write(_logger)
     
-    @retry_wrapper
     def create_project(self,name):
         self.authenticate_user()
         Message.new(Debug="coprhd create_project").write(_logger)
@@ -409,15 +443,18 @@ class CoprHDCLIDriver(object):
                 self.tenant)
         except utils.SOSError as e:
             if e.err_code == utils.SOSError.ENTRY_ALREADY_EXISTS_ERR:
-                Message.new(Debug="Project with "+name+" already exists").write(_logger)
-            elif(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+                Message.new(Debug="Project with "+self.project+" already exists").write(_logger)
+            elif(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd create project HTTP_ERR" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd create project failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd create project failed").write(_logger)
 
-    @retry_wrapper
     def create_export_group(self,name,host,exportgrouptype="Host"):
         self.authenticate_user()
         try:
@@ -451,14 +488,17 @@ class CoprHDCLIDriver(object):
                   self.exportgroup_obj.exportgroup_add_initiator(name,self.tenant,self.project,[initator], host, sync)
         
         except utils.SOSError as e:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+            if(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd create export groups HTTP_ERR" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd create export groups failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd create export groups failed").write(_logger)
-        
-    @retry_wrapper
+
     def create_host(self,name,label,hosttype="Other"):
         self.authenticate_user()
         hostname = self.host_obj.search_by_name(name)
@@ -484,14 +524,20 @@ class CoprHDCLIDriver(object):
                  bootvolume=None,
                  testconnection=None)
         except utils.SOSError as e:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+            if(e.err_code == utils.SOSError.HTTP_ERR):
+                if(e.err_text.find('host with the same hostName already exists') != -1):
+                 Message.new(Debug="coprhd add host already added").write(_logger)
+                else:
+                 raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd add initiators HTTP_ERR" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd create host failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd create host failed").write(_logger)
-        
-    @retry_wrapper
+
     def add_initiators(self,sync, hostlabel, protocol, portwwn,initname):
         self.authenticate_user()
         portwwn = None
@@ -506,16 +552,22 @@ class CoprHDCLIDriver(object):
                 break
            initname = portwwn
            initiatorwwn = None
-           self.hostinitiator_obj.create(sync,hostlabel,protocol,initiatorwwn,portwwn,initname)
+           self.hostinitiator_obj.create(sync,hostlabel,protocol,initiatorwwn,portwwn)
         except utils.SOSError as e:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+            if(e.err_code == utils.SOSError.HTTP_ERR):
+                if(e.err_text.find('same Initiator Port already exists') != -1):
+                 Message.new(Debug="coprhd add initiators already added").write(_logger)
+                else:
+                 raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd add initiators HTTP_ERR" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd add initiators failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd add initiators failed").write(_logger)
-            
-    @retry_wrapper
+    
     def create_network(self,name,nwtype):
         self.authenticate_user()
         try:
@@ -540,13 +592,17 @@ class CoprHDCLIDriver(object):
                     self.network_obj.add_endpoint(name,endpoint=host_port)
                   break
         except utils.SOSError as e:
-            if(e.err_code == (utils.SOSError.SOS_FAILURE_ERR or utils.SOSError.HTTP_ERR)):
+            if(e.err_code == utils.SOSError.HTTP_ERR):
+                raise utils.SOSError(
+                    utils.SOSError.HTTP_ERR,
+                    "coprhd create network HTTP_ERR" + e.err_text)
+            elif(e.err_code == utils.SOSError.SOS_FAILURE_ERR):
                 raise utils.SOSError(
                     utils.SOSError.SOS_FAILURE_ERR,
                     "coprhd create network failed" + e.err_text)
             else:
                 Message.new(Debug="coprhd create network failed").write(_logger)
-        
+
 @implementer(IProfiledBlockDeviceAPI)
 @implementer(IBlockDeviceAPI)
 class CoprHDBlockDeviceAPI(object):
@@ -618,7 +674,10 @@ class CoprHDBlockDeviceAPI(object):
         :param: blockdevice_id - the volume id
         :raise: UnknownVolume is not found
         """
-        dataset_id = UUID(blockdevice_id[6:])
+        try:
+         dataset_id = UUID(blockdevice_id[6:])
+        except ValueError:
+         raise UnknownVolume(blockdevice_id)
         volumesdetails = self.coprhdcli.get_volume_details("flocker-{}".format(dataset_id))
         if not volumesdetails:
          raise UnknownVolume(blockdevice_id)
@@ -634,7 +693,10 @@ class CoprHDBlockDeviceAPI(object):
         documentation.
         """
         Message.new(Debug="coprhd attach_volume invoked").write(_logger)
-        dataset_id = UUID(blockdevice_id[6:])
+        try:
+         dataset_id = UUID(blockdevice_id[6:])
+        except ValueError:
+         raise UnknownVolume(blockdevice_id)
         volumesdetails = self.coprhdcli.get_volume_details("flocker-{}".format(dataset_id))
         Message.new(Info="coprhd got volume details").write(_logger)
         if not volumesdetails:
@@ -678,9 +740,15 @@ class CoprHDBlockDeviceAPI(object):
         #[4:0:0:3]    disk                                    /dev/sdd
 
         self.rescan_scsi()
-        dataset_id = UUID(blockdevice_id[6:])
+        try:
+         dataset_id = UUID(blockdevice_id[6:])
+        except ValueError:
+         raise UnknownVolume(blockdevice_id)
         # Query WWN from CoprHD
+        wwn = None
         wwn = self.coprhdcli.get_volume_wwn("flocker-{}".format(dataset_id))
+        if not wwn:
+         raise UnattachedVolume(blockdevice_id)
         wwn = wwn[:len(wwn)-3]
         output = check_output([b"lsscsi","--wwn"])
         for row in output.split('\n'):
@@ -700,7 +768,10 @@ class CoprHDBlockDeviceAPI(object):
         :param: volume id = blockdevice_id
         :raises: unknownvolume exception if not found
         """
-        dataset_id = UUID(blockdevice_id[6:])
+        try:
+         dataset_id = UUID(blockdevice_id[6:])
+        except ValueError:
+         raise UnknownVolume(blockdevice_id)
         volumesdetails = self.coprhdcli.get_volume_details("flocker-{}".format(dataset_id))
         if not volumesdetails:
          raise UnknownVolume(blockdevice_id)
@@ -727,32 +798,28 @@ class CoprHDBlockDeviceAPI(object):
          return volumes
         for volume_name,volume_attr in volumes_dict.iteritems():
           attached_to = None
-          #Message.new(Debug="coprhd list_volumes for loop").write(_logger)
-          #Message.new(Debug="coprhd list_volumes" + volume_name).write(_logger)
           if volume_attr['attached_to'] is None:
            Message.new(Debug="coprhd list_volumes attached None").write(_logger)
           else:
             attached_to = volume_attr['attached_to']
           size = Decimal(volume_attr['size'])
           size = 1073741824 * int(size)
-          #Message.new(Debug="coprhd list_volumes creating blockvolume size is "+size).write(_logger)
           volume = BlockDeviceVolume(
                                     size=size, attached_to=attached_to,
                                     dataset_id=UUID(volume_name), blockdevice_id=u"block-{0}".format(volume_name)
                                     )
-          #Message.new(Debug="coprhd list_volumes appending volume").write(_logger)
           volumes.append(volume)
         Message.new(Debug="coprhd list_volumes returning").write(_logger)
         return volumes
             
 
 def configuration(coprhdhost, port, tenant,
-                           project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id):
+                           project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file):
     """
     :return:CoprHDBlockDeviceAPI object
     """
     return CoprHDBlockDeviceAPI(
         coprhdcliconfig=CoprHDCLIDriver(coprhdhost, 
         port, tenant, 
-        project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file,cluster_id),allocation_unit=1
+        project, varray, cookiedir, vpool,vpool_platinum,vpool_gold,vpool_silver,vpool_bronze,hostexportgroup,coprhdcli_security_file),allocation_unit=1
     )
