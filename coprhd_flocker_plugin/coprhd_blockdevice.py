@@ -727,6 +727,8 @@ class CoprHDBlockDeviceAPI(object):
             - Possibly creation of new volumes
         :return:none
         """
+        check_output([b"iscsiadm", "-m", "node", "--logout"])
+        check_output([b"iscsiadm", "-m", "node", "--login"])
         channel_number = self._get_channel_number()
         # Check for error condition
         if channel_number < 0:
