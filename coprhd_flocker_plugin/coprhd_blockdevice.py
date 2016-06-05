@@ -709,6 +709,8 @@ class CoprHDBlockDeviceAPI(object):
            Message.new(Info="coprhd invoking export_volume").write(_logger)
            self.coprhdcli.export_volume("flocker-{}".format(dataset_id))
         self.rescan_scsi()
+        self.rescan_scsi()
+        self.rescan_scsi()
         size = Decimal(volumesdetails[volumesdetails.keys()[0]]['size'])
         size = 1073741824 * int(size)
         return BlockDeviceVolume(
@@ -725,8 +727,41 @@ class CoprHDBlockDeviceAPI(object):
             - Possibly creation of new volumes
         :return:none
         """
-        check_output([b"rescan-scsi-bus", "-r", "-c"])
+        channel_number = self._get_channel_number()
+        # Check for error condition
+        if channel_number < 0:
+            Message.new(error="iSCSI login not done for VRAID bailing out").write(_logger)
+            raise DeviceException
+        else:
+            check_output(["/usr/bin/rescan-scsi-bus.sh", "-r", "-c", channel_number])
+        
+    def _get_channel_number(self):
+        """
+        Query scsi to get channel number of XtremIO devices.
+        Right now it supports only one XtremIO connected array
+        :return: channel number
+        """
+        output = check_output([b"/usr/bin/lsscsi"])
+        # lsscsi gives output in the following form:
+        # [0:0:0:0]    disk    ATA      ST91000640NS     SN03  /dev/sdp
+        # [1:0:0:0]    disk    DGC      LUNZ             0532  /dev/sdb
+        # [1:0:1:0]    disk    DGC      LUNZ             0532  /dev/sdc
+        # [8:0:0:0]    disk    MSFT     Virtual HD       6.3   /dev/sdd
+        # [9:0:0:0]    disk XtremIO  XtremApp         2400     /dev/sde
 
+        # We shall parse the output above and to give out channel number
+        # as 9
+        for row in output.split('\n'):
+            if re.search(r'VRAID', row, re.I):
+                channel_row = re.search('\d+', row)
+                if channel_row:
+                    channel_number = channel_row.group()
+                    return channel_number
+
+        # Did not find channel number of xtremIO
+        # The number cannot be negative
+        return -1
+        
     def get_device_path(self, blockdevice_id):
         """
         :param blockdevice_id:
@@ -738,7 +773,7 @@ class CoprHDBlockDeviceAPI(object):
         #[3:0:0:3]    disk    0x600601608d20370029ab9a2b1acfe  /dev/sde
         #[4:0:0:0]    disk                                    /dev/sdc
         #[4:0:0:3]    disk                                    /dev/sdd
-
+        devicePath = " "
         self.rescan_scsi()
         try:
          dataset_id = UUID(blockdevice_id[6:])
@@ -750,6 +785,20 @@ class CoprHDBlockDeviceAPI(object):
         if not wwn:
          raise UnattachedVolume(blockdevice_id)
         wwn = wwn[:len(wwn)-3]
+        lunid = self.coprhdcli.get_volume_lunid("flocker-{}".format(dataset_id))
+        output = check_output([b"/usr/bin/lsscsi"])
+        for row in output.split('\n'):
+                if re.search(r'VRAID', row, re.I):
+                    if re.search(r'\d:\d:\d:' + str(lunid), row, re.I):
+                        device_name = re.findall(r'/\w+', row, re.I)
+                        if device_name:
+                            devicePath = device_name[0] + device_name[1]
+
+        if devicePath:
+            Message.new(value="get_device_path returned : " + devicePath).write(_logger)
+            return FilePath(devicePath)
+        raise UnknownVolume(blockdevice_id)
+        '''
         output = check_output([b"lsscsi","--wwn"])
         for row in output.split('\n'):
             if re.search(r'0x', row, re.I):
@@ -758,6 +807,7 @@ class CoprHDBlockDeviceAPI(object):
                     if device_name:
                         return FilePath(device_name[0] + device_name[1])
         raise UnknownVolume(blockdevice_id)
+        '''
         
     def resize_volume(self, blockdevice_id, size):
         Message.new(Debug="coprhd resize_volume invoked").write(_logger)
@@ -779,6 +829,7 @@ class CoprHDBlockDeviceAPI(object):
          Message.new(Info="coprhd detach_volume" + str(blockdevice_id)).write(_logger)
          dataset_id = UUID(blockdevice_id[6:])
          self.coprhdcli.unexport_volume("flocker-{}".format(dataset_id))
+         #self.rescan_scsi()
         else:
             Message.new(Info="Volume" + blockdevice_id + "not attached").write(_logger)
             raise UnattachedVolume(blockdevice_id)
