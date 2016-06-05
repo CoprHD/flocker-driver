@@ -713,6 +713,8 @@ class CoprHDBlockDeviceAPI(object):
         self.rescan_scsi()
         size = Decimal(volumesdetails[volumesdetails.keys()[0]]['size'])
         size = 1073741824 * int(size)
+        check_output([b"iscsiadm", "-m", "node", "--logout"])
+        check_output([b"iscsiadm", "-m", "node", "--login"])
         return BlockDeviceVolume(
           size=size, attached_to=attach_to,
           dataset_id=dataset_id,
@@ -727,8 +729,6 @@ class CoprHDBlockDeviceAPI(object):
             - Possibly creation of new volumes
         :return:none
         """
-        check_output([b"iscsiadm", "-m", "node", "--logout"])
-        check_output([b"iscsiadm", "-m", "node", "--login"])
         channel_number = self._get_channel_number()
         # Check for error condition
         if channel_number < 0:
@@ -800,17 +800,7 @@ class CoprHDBlockDeviceAPI(object):
             Message.new(value="get_device_path returned : " + devicePath).write(_logger)
             return FilePath(devicePath)
         raise UnknownVolume(blockdevice_id)
-        '''
-        output = check_output([b"lsscsi","--wwn"])
-        for row in output.split('\n'):
-            if re.search(r'0x', row, re.I):
-                if re.search(str(wwn), row, re.I):
-                    device_name = re.findall(r'/\w+', row, re.I)
-                    if device_name:
-                        return FilePath(device_name[0] + device_name[1])
-        raise UnknownVolume(blockdevice_id)
-        '''
-        
+           
     def resize_volume(self, blockdevice_id, size):
         Message.new(Debug="coprhd resize_volume invoked").write(_logger)
         pass
@@ -831,7 +821,6 @@ class CoprHDBlockDeviceAPI(object):
          Message.new(Info="coprhd detach_volume" + str(blockdevice_id)).write(_logger)
          dataset_id = UUID(blockdevice_id[6:])
          self.coprhdcli.unexport_volume("flocker-{}".format(dataset_id))
-         #self.rescan_scsi()
         else:
             Message.new(Info="Volume" + blockdevice_id + "not attached").write(_logger)
             raise UnattachedVolume(blockdevice_id)
