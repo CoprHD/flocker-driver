@@ -2,27 +2,24 @@ COPRHD Flocker Plugin
 ======================
 The plugin for COPRHD Flocker integration.
 
-## Description
-ClusterHQ/Flocker provides an efficient and easy way to connect persistent store with Docker containers. This project provides a plugin to provision resillient storage from COPRHD.
-
 ## COPRHD Flocker Intergration Block Diagram
+ ![alt text]( CoprHD-Flocker.png "CoprHD-Flocker")
 
 
-
-Tested the coprHD
-1.	 Ubuntu – 14.04.03 – LTS 
-2.	Flocker – 1.10.2
-3.	Docker – 1.10.1 - build 9e83765
-4.	2 Node setup
-
+verfied versions
+CoprHD - 2.4.1
+Ubuntu – 14.04.03 – LTS 
+Flocker – 1.10.2
+Docker – 1.10.1 - build 9e83765
 
 
-Pre-requsities
+## Installation
 ---------------
-1. Install CoprHD - Vipr 
+- Install CoprHD 2.4.1, please refer below links to download,build and setup CoprHD.
+    https://coprhd.atlassian.net/wiki/display/COP/How+to+Build+and+Run+CoprHD 
+    https://coprhd.atlassian.net/wiki/display/COP/How+to+download+and+build+CoprHD 
 
-	a. Verify the Storage arrays recognized . After login to the Vipr we can check the storage systems
-Below is a sample screenshot
+- once you are able to install and login to CoprHD. you should discover storage systems, create virtual arrays and virtual pools. Below you can see screenshots.
 
 	![alt text]( ViprStorageSystems.png "Storage Arrays")
     
@@ -35,27 +32,47 @@ Below is a sample screenshot
 	![alt text]( ViprVirtualPools.png "Virtual Pools")
 
 
-2. Install scsi tools
+- Install OpeniSCSI 
 
-sudo apt-get update
-sudo apt-get install -y open-iscsi
-sudo apt-get install -y lsscsi
-sudo apt-get -y install scsitools
-
-3. Install ClusterHQ/Flocker
+    * Ubuntu<br>
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y open-iscsi
+    sudo apt-get install -y lsscsi
+    sudo apt-get -y install scsitools
+    ```
+    * Centos<br>
+    ```bash
+    sudo yum -y install iscsi-initiator-utils
+    sudo yum -y install lsscsi
+    sudo yum -y install sg3_utils
+    ```
+	
+- Discover iSCSI of storage array<br>
+   ```bash
+    sudo iscsiadm -m discovery -t st -p {ipaddress of storage array iscsi port}
+	```
+- Login iSCSI data port<br>
+   ```bash
+   scsiadm -m node  -p ${ipaddress of storage array iscsi portal} --login
+   ```
+   
+- Install ClusterHQ/Flocker
 Refer to ubuntu install notes -> https://docs.clusterhq.com/en/0.4.0/
 
-4. Install EMC Plugin 
+- Install CoprHD Flocker Plugin 
+	```bash
+	git clone https://review.coprhd.org/scm/ce/flocker-driver.git
+	cd flocker-driver/
+	sudo /opt/flocker/bin/python setup.py install
+	```
 
-git clone https://github.com/emccode/flocker-drivers
-cd copr-hd
-sudo /opt/flocker/bin/python setup.py install
-
-5. Install vipr-cli 2.4 or above
-
-Refer the below link for more information
-http://www.emc.com/collateral/TechnicalDocument/docu62079.pdf
-
+- Install CoprHD-cli 2.3 or above
+   ```bash
+   Refer section "Install the ViPR Controller CLI on Linux" in the given below link
+   http://www.emc.com/collateral/TechnicalDocument/docu62079.pdf
+   ```
+   
 ## Usage Instructions
 To start the plugin on a node, a configuration file must exist on the node at /etc/flocker/agent.yml.
 ```bash
@@ -64,29 +81,20 @@ dataset: {backend: coprhd_flocker_plugin}
 version: 1
 dataset:
     backend: coprhd_flocker_plugin
-    xms_ip: ${xms_ip}
-    xms_user: ${xms_user}
-    xms_password: ${xms_password}
-    coprhd_hostname: ${coprhd_hostname}
-    coprhd_port: ${coprhd_port}
-    coprhd_username: ${coprhd_username}
-    coprhd_password: ${coprhd_password}
-    coprhd_tenant: ${coprhd_tenant}
-    coprhd_project: ${coprhd_project}
-    coprhd_varray: ${coprhd_varray}
-    coprhd_cookiedir: ${coprhd_cookiedir}
-    volume_backend_name: ${volume_backend_name}
-    coprhd_vpool: ${coprhd_vpool}
+    coprhdhost: ${coprhd_hostname}
+    port: ${coprhd_port}
+    tenant: ${coprhd-tenant}
+    project: ${coprhd-project}
+    varray: ${coprhd-varray}
+    cookiedir: ${cookiedir}
+    vpool: ${vpool}
+    vpool_gold: ${vpool_gold}
+    vpool_silver: ${vpool_silver}
+    vpool_bronze: ${vpool_bronze}
+	vpool_platinum: ${vpool_platinum}
+	hostexportgroup: ${ipaddress of flocker agent host}
+	coprhdcli_security_file: ${coprhdcli_security_file}
 ```
-A sample vagrant environment help 
-Please refer to ClusterHQ/Flocker documentation for usage. A sample deployment and application can be found at to be updated
-
-
-
-
-
-
-
 
 The below test case have been tested 
 
@@ -107,9 +115,6 @@ When docker starts host will get created on Vipr
 
 In Vipr when storage is getting provisioned the same will get refrected in the vipr Dashboard in the task list
 
-## Future
-- Add Chap protocol support for iSCSI
-- Add 
 
 10. Generating & using security file
 =========================================
