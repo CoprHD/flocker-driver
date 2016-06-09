@@ -9,8 +9,8 @@ The plugin for COPRHD Flocker integration.
 verfied versions
 CoprHD - 2.4.1
 Ubuntu – 14.04.03 – LTS 
-Flocker – 1.10.2
-Docker – 1.10.1 - build 9e83765
+Flocker – 1.12.0
+Docker – 1.11.2 - build b9f10c9
 
 
 ## Installation
