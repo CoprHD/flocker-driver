@@ -113,7 +113,7 @@ When docker starts host will get created on Vipr
 
 ![alt text]( ViprExportGroups.png "Storage Arrays")
 
-In Vipr when storage is getting provisioned the same will get refrected in the vipr Dashboard in the task list
+In Vipr when storage is getting provisioned the same will get reflected in the vipr Dashboard in the task list
 
 
 10. Generating & using security file
