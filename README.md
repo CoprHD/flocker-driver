@@ -62,9 +62,11 @@ Refer to ubuntu install notes -> https://docs.clusterhq.com/en/0.4.0/
 
 - Install CoprHD Flocker Plugin 
 	```bash
-	git clone https://review.coprhd.org/scm/ce/flocker-driver.git
-	cd flocker-driver/
-	sudo /opt/flocker/bin/python setup.py install
+	git clone https://github.com/emccode/flocker-drivers
+    cd CoprHD/
+    git pull --recurse-submodules
+    cd flocker-driver
+    sudo /opt/flocker/bin/python setup.py install
 	```
 
 - Install CoprHD-cli 2.3 or above
