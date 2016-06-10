@@ -64,6 +64,7 @@ Refer to ubuntu install notes -> https://docs.clusterhq.com/en/0.4.0/
 	```bash
 	git clone https://github.com/emccode/flocker-drivers
     cd CoprHD/
+	To get CorpHD driver, kindly checkout the submodule
     git pull --recurse-submodules
     cd flocker-driver
     sudo /opt/flocker/bin/python setup.py install
